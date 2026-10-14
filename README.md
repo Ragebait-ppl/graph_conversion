@@ -171,39 +171,121 @@ python generate_homogeneous_graph.py
 
 ### Key Capabilities and Taxonomy Refinements
 
-1. **Contiguous Node Indexing**: Maps all system entities (Processes, Memory regions, Sockets) to a contiguous sequence $0, 1, \dots, |V|-1$.
+1. **Contiguous Node Indexing**: Maps all heterogeneous system entities (Processes, Memory regions, Sockets) to a contiguous sequence $0, 1, \dots, |V|-1$.
 2. **Differentiated Node Taxonomy**:
    - **System Core Processes** (`#818cf8` Indigo Diamond): OS infrastructure binaries (`services.exe`, `lsass.exe`, `svchost.exe`).
-   - **User / App Processes** (`#00e5ff` Cyan Dot): User-space applications and scripts (`powershell.exe`, `chrome.exe`).
-   - **High-Risk Memory** (`#f43f5e` Crimson Star): Unbacked executable private pages with Shannon Entropy $H \ge 6.5$ or RWX permissions.
+   - **User / App Processes** (`#00e5ff` Cyan Dot): User-space applications and interactive sessions (`powershell.exe`, `chrome.exe`).
+   - **High-Risk Memory** (`#f43f5e` Crimson Star): Unbacked executable private pages with Shannon Entropy $H \ge 6.5$ or RWX permissions (injected shellcode / stagers).
    - **Normal Unbacked Memory** (`#f59e0b` Amber Square): Standard unbacked code buffers ($H < 6.5$).
    - **TCP Established** (`#10b981` Green Triangle): Active network channels with destination service identification (`:443 (HTTPS)`).
    - **TCP Listening** (`#38bdf8` Sky Blue Down-Triangle): Local listening daemons (`:135 (RPC/EPMAP)`).
    - **UDP Sockets** (`#14b8a6` Teal Hexagon): Datagram endpoints (`:5353 (mDNS)`).
-3. **Adaptive Physics Repulsion & Elastic Spacing**:
+3. **Explicit Directed Edge Labeling & Taxonomy**:
+   - **`spawns`** (`#a855f7` Purple): Direct process parentage (PPID $\to$ PID), weighted by child thread count.
+   - **`has_memory`** (`#fb7185` Coral): Process $\to$ Allocated unbacked memory region, weighted by entropy risk and RWX flags.
+   - **`connected_to`** (`#38bdf8` Sky Blue): Process $\to$ Network socket channel, weighted by connection state (`ESTABLISHED` vs `LISTEN`).
+   - **Interactive Edge Controls**: Vis.js renders middle-aligned relation labels with dark stroke borders directly on the connecting springs. A dedicated **Display Edge Labels** checkbox in the sidebar allows users to toggle edge labels on and off in real time.
+4. **Adaptive Physics Repulsion & Elastic Spacing**:
    - Integrated live **Node Repulsion Slider** (500 to 8000) and **Edge Length Slider** (80 to 400) allowing users to expand spatial clearance between crowded hubs and nodes dynamically.
    - Built-in **Collision Avoidance** (`avoidOverlap: 1.0`) preventing overlapping nodes and labels.
    - **Freeze / Resume Physics** button to lock the spacious configuration in place for drift-free inspection.
    - Precomputed spring coordinates expanded over a broad $[-2200, 2200]$ plane ($k = 3.6 / \sqrt{|V|}$) for generous initial visual margins.
-4. **Unified Feature Matrix ($\mathbf{X} \in \mathbb{R}^{|V| \times 16}$)**:
-   - Entity type one-hot encoding
-   - Process attributes (threads, modules, privilege status)
-   - Memory attributes (Shannon entropy, region size, RWX flags)
-   - Network attributes (protocol, ports, socket state)
-   - Graph structural metrics (in-degree, out-degree, total degree, weighted degree)
-   - Continuous features normalized via Min-Max scaling to $[0, 1]$
-5. **Dynamic Visual & Machine-Learning Outputs**:
+5. **Unified Feature Matrix ($\mathbf{X} \in \mathbb{R}^{|V| \times 16}$)**:
+
+| Feature Dimension | Name | Description | Value Range |
+| :--- | :--- | :--- | :---: |
+| `feat_0` | `is_process` | One-hot indicator for Process entity | $\{0.0, 1.0\}$ |
+| `feat_1` | `is_memory` | One-hot indicator for Virtual Memory entity | $\{0.0, 1.0\}$ |
+| `feat_2` | `is_socket` | One-hot indicator for Network Socket entity | $\{0.0, 1.0\}$ |
+| `feat_3` | `threads_norm` | Process active thread count (Min-Max scaled) | $[0.0, 1.0]$ |
+| `feat_4` | `modules_norm` | Process loaded DLL/module count (Min-Max scaled) | $[0.0, 1.0]$ |
+| `feat_5` | `is_system` | Indicates elevated/system binary status | $\{0.0, 1.0\}$ |
+| `feat_6` | `entropy_norm` | Shannon entropy $H$ normalized by max bound (8.0) | $[0.0, 1.0]$ |
+| `feat_7` | `size_norm` | Memory region byte size (Min-Max scaled) | $[0.0, 1.0]$ |
+| `feat_8` | `is_rwx` | Indicates `PAGE_EXECUTE_READWRITE` permission | $\{0.0, 1.0\}$ |
+| `feat_9` | `port_norm` | Local/Remote port normalized ($0 \dots 65535$) | $[0.0, 1.0]$ |
+| `feat_10` | `is_listening` | Socket in `LISTEN` state | $\{0.0, 1.0\}$ |
+| `feat_11` | `is_established` | Socket in active `ESTABLISHED` state | $\{0.0, 1.0\}$ |
+| `feat_12` | `in_deg_norm` | Graph in-degree centrality (Min-Max scaled) | $[0.0, 1.0]$ |
+| `feat_13` | `out_deg_norm` | Graph out-degree centrality (Min-Max scaled) | $[0.0, 1.0]$ |
+| `feat_14` | `tot_deg_norm` | Total node degree centrality (Min-Max scaled) | $[0.0, 1.0]$ |
+| `feat_15` | `weighted_deg_norm` | Weighted degree centrality sum (Min-Max scaled) | $[0.0, 1.0]$ |
+
+6. **Dynamic Visual & Machine-Learning Outputs**:
    - `homogeneous_graph.json`: Full graph schema (nodes, features, edge indices, spatial coordinates).
    - `homogeneous_nodes.csv`: Node table with normalized feature dimensions, category classifications, and $(x, y)$ positions.
    - `homogeneous_edges.csv`: Edge table with source/target indices, relation types, and normalized weights.
    - `homogeneous_pyg_data.pt`: PyTorch Geometric `Data(x=[|V|, 16], edge_index=[2, |E|], edge_attr=[|E|, 4])` artifact.
-   - `homogeneous_graph_view.html`: Standalone interactive web view with search by PID/name/service, category filters, live repulsion controls, and 16D feature inspector.
+   - `homogeneous_graph_view.html`: Standalone interactive web view with search by PID/name/service, category filters, live repulsion controls, edge label toggle, and 16D feature inspector.
    - `homogeneous_graph_preview.png`: Publication-grade high-resolution static rendering.
 
 > **Note**: Datasets (`telemetry.json`), intermediate CSVs, and generated graph outputs are generated dynamically on each run and are excluded from Git via `.gitignore` to preserve local privacy and prevent repository bloat.
 
 ---
 
+## 🧠 Core Concepts & Terminology Guide
+
+For outside researchers and developers, here is a glossary of the security and graph concepts underpinning this engine:
+
+### 1. Instantaneous Kernel Snapshotting
+
+Traditional security monitors (e.g. Sysmon, ETW) produce event logs over time. In contrast, this engine captures an **instantaneous spatial snapshot** of all kernel objects existing at a single point in time. This models the operating system as a single cohesive graph topology rather than disconnected event streams.
+
+### 2. Unbacked Executable Memory Pages
+
+In legitimate Windows execution, executable machine code is loaded from signed binaries on disk (PE files such as `.exe` or `.dll`). These pages have a memory type of `MEM_IMAGE`.
+
+When malware executes in-memory payloads (e.g., Cobalt Strike beacons, reflective DLL injection, shellcode loaders), it allocates private memory (`MEM_PRIVATE`) via `VirtualAlloc` and marks it executable (`PAGE_EXECUTE_READWRITE` or `PAGE_EXECUTE_READ`). Because there is no backing file on disk, these pages are termed **unbacked**. Detecting unbacked executable memory is one of the highest-fidelity indicators of in-memory compromise.
+
+### 3. Shannon Entropy ($H$)
+
+Entropy measures the degree of algorithmic randomness in a byte sequence:
+
+$$H = -\sum_{i=0}^{255} p_i \log_2(p_i)$$
+
+- **Plaintext / Normal Code**: Typically $H \in [3.5, 5.2]$ due to repetitive assembly opcodes (`MOV`, `PUSH`, `CALL`).
+- **Encrypted / Packed Shellcode**: Exhibits high randomness approaching theoretical maximum ($H \ge 6.5$).
+- This engine scans executable memory buffers up to 1 MB per region to calculate exact entropy scores without writing raw memory contents to disk.
+
+### 4. Extended TCP/UDP Socket Mapping
+
+Standard socket APIs reveal open ports, but fail to tie them to the originating process. The engine utilizes `GetExtendedTcpTable` and `GetExtendedUdpTable` (`TCP_TABLE_OWNER_PID_ALL`) to link every active socket directly to its host Process ID (PID). This exposes hidden C2 channels and unauthorized listening ports.
+
+### 5. Homogeneous Graph Conversion for Graph Neural Networks (GNNs)
+
+Heterogeneous graphs assign different feature shapes to different entity types (e.g., processes have thread counts, while sockets have IP addresses). However, standard GNN layers (such as Graph Convolutional Networks, Graph Attention Networks, and GraphSAGE) operate on a **homogeneous feature matrix** $\mathbf{X} \in \mathbb{R}^{|V| \times d}$ and an edge index matrix $\mathbf{E} \in \mathbb{Z}^{2 \times |E|}$ with contiguous zero-based indices.
+
+Our conversion pipeline projects all heterogeneous system entities into a shared 16-dimensional continuous feature space, assigning contiguous integer IDs $0, 1, \dots, |V|-1$, enabling immediate compatibility with PyTorch Geometric and DGL.
+
+### 6. Dynamic Physics Repulsion & Spatial Clearance
+
+In dense host graphs, process hubs (such as `svchost.exe` hosting dozens of sockets and memory regions) naturally collapse into visual clutter under default spring algorithms. The engine utilizes an interactive ForceAtlas2 physics simulator with:
+- **Inverse-Square Repulsion**: Nodes push each other away like electrostatic charges ($F \propto 1/r^2$).
+- **Elastic Springs**: Edges pull connected neighbors together.
+- **Dynamic Tunability**: Real-time browser sliders allow researchers to scale repulsion and spring distances on the fly to inspect dense subgraphs.
+
+---
+
+## 🚀 Complete Pipeline Execution Guide
+
+Run the full workflow locally with three simple commands:
+
+```powershell
+# 1. Capture live system execution state (run terminal as Administrator for SeDebugPrivilege)
+.\bin\telemetry_engine.exe -o telemetry.json
+
+# 2. Parse and organize into structured CSV node and edge tables
+python organize_and_clean_telemetry.py
+
+# 3. Transform into homogeneous graph, PyG tensor, static preview, and interactive HTML viewer
+python generate_homogeneous_graph.py
+```
+
+Open `homogeneous_graph_view.html` in any browser to inspect the resulting interactive graph.
+
+---
+
 ## 🛡️ License
 
 This project is licensed under the MIT License.
+

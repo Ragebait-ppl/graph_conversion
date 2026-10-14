@@ -477,10 +477,33 @@ def generate_homogeneous_graph(
                 ha="center", va="bottom",
                 bbox=dict(boxstyle="round,pad=0.25", facecolor="#1e293b", edgecolor="#475569", alpha=0.9))
 
-    plt.title("Windows Host Forensics Homogeneous Graph\n(Differentiated Node Categories, Formulated Labels, High Spacing)",
+    # Annotate representative edge relationship labels
+    sample_edge_counts = {"spawns": 0, "has_memory": 0, "connected_to": 0}
+    for e in valid_edges:
+        rel = e["relationship"]
+        if sample_edge_counts.get(rel, 0) < 3:
+            src = e["source_idx"]
+            tgt = e["target_idx"]
+            mx = (coords_x[src] + coords_x[tgt]) / 2.0
+            my = (coords_y[src] + coords_y[tgt]) / 2.0
+            ax.text(mx, my, f" {rel} ", fontsize=5.8, color="#e2e8f0", fontweight="bold",
+                    ha="center", va="center",
+                    bbox=dict(boxstyle="round,pad=0.15", facecolor="#0f172a", edgecolor=rel_colors.get(rel, "#64748b"), alpha=0.88, lw=0.6))
+            sample_edge_counts[rel] += 1
+
+    plt.title("Windows Host Forensics Homogeneous Graph\n(Differentiated Node Categories, Formulated Labels, Edge Relationships & High Spacing)",
               color="#f8fafc", fontsize=15, fontweight="bold", pad=20)
-    plt.legend(facecolor="#0f172a", edgecolor="#334155", labelcolor="#f8fafc",
-               loc="upper right", fontsize=9, framealpha=0.9)
+
+    # Combine Node and Edge Relationship Legends
+    from matplotlib.lines import Line2D
+    cur_handles, cur_labels = ax.get_legend_handles_labels()
+    edge_legend_handles = [
+        Line2D([0], [0], color="#a855f7", lw=2, label="Edge: spawns (PPID -> PID)"),
+        Line2D([0], [0], color="#fb7185", lw=2, label="Edge: has_memory (Proc -> Mem)"),
+        Line2D([0], [0], color="#38bdf8", lw=2, label="Edge: connected_to (Proc -> Sock)")
+    ]
+    ax.legend(handles=cur_handles + edge_legend_handles, facecolor="#0f172a", edgecolor="#334155",
+              labelcolor="#f8fafc", loc="upper right", fontsize=8, framealpha=0.92)
     plt.axis("off")
     plt.tight_layout()
     
@@ -557,10 +580,18 @@ def generate_homogeneous_graph(
         vis_edges.append({
             "from": int(e["source_idx"]),
             "to": int(e["target_idx"]),
+            "label": rel,
             "color": {"color": c, "highlight": "#ffffff", "opacity": 0.55},
             "width": max(float(e["weight_normalized"]) * 2.2, 0.7),
             "arrows": "to",
-            "title": f"<b>{rel}</b> (weight: {e['weight']:.2f})"
+            "title": f"<b>{rel}</b> (weight: {e['weight']:.2f})",
+            "font": {
+                "color": c,
+                "size": 9,
+                "strokeWidth": 2,
+                "strokeColor": "#080e1a",
+                "align": "middle"
+            }
         })
 
     html_content = f"""<!DOCTYPE html>
@@ -603,6 +634,7 @@ def generate_homogeneous_graph(
             font-size: 16px;
             font-weight: 700;
             background: linear-gradient(135deg, #38bdf8, #818cf8);
+            background-clip: text;
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             margin-bottom: 4px;
@@ -844,6 +876,12 @@ def generate_homogeneous_graph(
                 </div>
                 <input type="range" min="80" max="400" step="10" value="160" class="slider" id="edge-len-slider">
             </div>
+            <div class="slider-row" style="margin-top: 6px; padding: 4px 0;">
+                <label style="display: flex; align-items: center; justify-content: space-between; font-size: 11.5px; color: #cbd5e1; cursor: pointer;">
+                    <span>Display Edge Labels</span>
+                    <input type="checkbox" id="toggle-edge-labels" checked style="accent-color: #38bdf8; cursor: pointer; width: 15px; height: 15px;">
+                </label>
+            </div>
             <div class="button-row">
                 <button class="btn-action" id="physics-toggle-btn" onclick="togglePhysics()">Freeze Physics</button>
                 <button class="btn-action btn-secondary" onclick="network.fit({{animation: true}})">Fit Screen</button>
@@ -870,6 +908,11 @@ def generate_homogeneous_graph(
             <div class="legend-item"><div class="legend-marker" style="background:#10b981; clip-path: polygon(50% 0%, 0% 100%, 100% 100%);"></div> TCP Established (Active)</div>
             <div class="legend-item"><div class="legend-marker" style="background:#38bdf8; clip-path: polygon(0% 0%, 100% 0%, 50% 100%);"></div> TCP Listening (Daemon)</div>
             <div class="legend-item"><div class="legend-marker" style="background:#14b8a6;"></div> UDP Socket</div>
+
+            <div style="font-weight:700; color:#f8fafc; margin-top:10px; margin-bottom:6px; font-size:11.5px; border-top:1px solid #334155; padding-top:6px;">Edge Relationships</div>
+            <div class="legend-item"><div class="legend-marker" style="background:#a855f7; height:3px; border-radius:0;"></div> spawns (PPID &rarr; PID)</div>
+            <div class="legend-item"><div class="legend-marker" style="background:#fb7185; height:3px; border-radius:0;"></div> has_memory (Proc &rarr; Mem)</div>
+            <div class="legend-item"><div class="legend-marker" style="background:#38bdf8; height:3px; border-radius:0;"></div> connected_to (Proc &rarr; Sock)</div>
         </div>
 
         <div class="stats-overlay">
@@ -901,7 +944,14 @@ def generate_homogeneous_graph(
                 borderWidthSelected: 2.5
             }},
             edges: {{
-                smooth: {{ type: 'continuous', roundness: 0.15 }}
+                smooth: {{ type: 'continuous', roundness: 0.15 }},
+                font: {{
+                    color: '#cbd5e1',
+                    size: 9,
+                    strokeWidth: 2,
+                    strokeColor: '#080e1a',
+                    align: 'middle'
+                }}
             }},
             physics: {{
                 enabled: true,
@@ -953,6 +1003,21 @@ def generate_homogeneous_graph(
                 }}
             }});
         }});
+
+        // Edge Label Toggle Listener
+        const edgeLabelToggle = document.getElementById('toggle-edge-labels');
+        if (edgeLabelToggle) {{
+            edgeLabelToggle.addEventListener('change', function(e) {{
+                const showLabels = e.target.checked;
+                network.setOptions({{
+                    edges: {{
+                        font: {{
+                            size: showLabels ? 9 : 0
+                        }}
+                    }}
+                }});
+            }});
+        }}
 
         // Toggle Physics Freeze / Live
         function togglePhysics() {{
