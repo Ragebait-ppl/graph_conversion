@@ -173,26 +173,35 @@ python generate_homogeneous_graph.py
 
 ### Key Capabilities and Taxonomy Refinements
 
-1. **Contiguous Node Indexing**: Maps all heterogeneous system entities (Processes, Memory regions, Sockets) to a contiguous sequence $0, 1, \dots, |V|-1$.
-2. **Differentiated Node Taxonomy**:
-   - **System Core Processes** (`#818cf8` Indigo Diamond): OS infrastructure binaries (`services.exe`, `lsass.exe`, `svchost.exe`).
-   - **User / App Processes** (`#00e5ff` Cyan Dot): User-space applications and interactive sessions (`powershell.exe`, `chrome.exe`).
-   - **High-Risk Memory** (`#f43f5e` Crimson Star): Unbacked executable private pages with Shannon Entropy $H \ge 6.5$ or RWX permissions (injected shellcode / stagers).
-   - **Normal Unbacked Memory** (`#f59e0b` Amber Square): Standard unbacked code buffers ($H < 6.5$).
-   - **TCP Established** (`#10b981` Green Triangle): Active network channels with destination service identification (`:443 (HTTPS)`).
-   - **TCP Listening** (`#38bdf8` Sky Blue Down-Triangle): Local listening daemons (`:135 (RPC/EPMAP)`).
-   - **UDP Sockets** (`#14b8a6` Teal Hexagon): Datagram endpoints (`:5353 (mDNS)`).
-3. **Explicit Directed Edge Labeling & Taxonomy**:
-   - **`spawns`** (`#a855f7` Purple): Direct process parentage (PPID $\to$ PID), weighted by child thread count.
-   - **`has_memory`** (`#fb7185` Coral): Process $\to$ Allocated unbacked memory region, weighted by entropy risk and RWX flags.
-   - **`connected_to`** (`#38bdf8` Sky Blue): Process $\to$ Network socket channel, weighted by connection state (`ESTABLISHED` vs `LISTEN`).
-   - **Interactive Edge Controls**: Vis.js renders middle-aligned relation labels with dark stroke borders directly on the connecting springs. A dedicated **Display Edge Labels** checkbox in the sidebar allows users to toggle edge labels on and off in real time.
-4. **Adaptive Physics Repulsion & Elastic Spacing**:
-   - Integrated live **Node Repulsion Slider** (500 to 8000) and **Edge Length Slider** (80 to 400) allowing users to expand spatial clearance between crowded hubs and nodes dynamically.
-   - Built-in **Collision Avoidance** (`avoidOverlap: 1.0`) preventing overlapping nodes and labels.
-   - **Freeze / Resume Physics** button to lock the spacious configuration in place for drift-free inspection.
-   - Precomputed spring coordinates expanded over a broad $[-2200, 2200]$ plane ($k = 3.6 / \sqrt{|V|}$) for generous initial visual margins.
-5. **Unified Feature Matrix ($\mathbf{X} \in \mathbb{R}^{|V| \times 16}$)**:
+#### 1. Contiguous Node Indexing
+
+Maps all heterogeneous system entities (Processes, Memory regions, Sockets) to a contiguous sequence $0, 1, \dots, |V|-1$.
+
+#### 2. Differentiated Node Taxonomy
+
+- **System Core Processes** (`#818cf8` Indigo Diamond): OS infrastructure binaries (`services.exe`, `lsass.exe`, `svchost.exe`).
+- **User / App Processes** (`#00e5ff` Cyan Dot): User-space applications and interactive sessions (`powershell.exe`, `chrome.exe`).
+- **High-Risk Memory** (`#f43f5e` Crimson Star): Unbacked executable private pages with Shannon Entropy $H \ge 6.5$ or RWX permissions (injected shellcode / stagers).
+- **Normal Unbacked Memory** (`#f59e0b` Amber Square): Standard unbacked code buffers ($H < 6.5$).
+- **TCP Established** (`#10b981` Green Triangle): Active network channels with destination service identification (`:443 (HTTPS)`).
+- **TCP Listening** (`#38bdf8` Sky Blue Down-Triangle): Local listening daemons (`:135 (RPC/EPMAP)`).
+- **UDP Sockets** (`#14b8a6` Teal Hexagon): Datagram endpoints (`:5353 (mDNS)`).
+
+#### 3. Explicit Directed Edge Labeling & Taxonomy
+
+- **`spawns`** (`#a855f7` Purple): Direct process parentage (PPID $\to$ PID), weighted by child thread count.
+- **`has_memory`** (`#fb7185` Coral): Process $\to$ Allocated unbacked memory region, weighted by entropy risk and RWX flags.
+- **`connected_to`** (`#38bdf8` Sky Blue): Process $\to$ Network socket channel, weighted by connection state (`ESTABLISHED` vs `LISTEN`).
+- **Interactive Edge Controls**: Vis.js renders middle-aligned relation labels with dark stroke borders directly on the connecting springs. A dedicated **Display Edge Labels** checkbox in the sidebar allows users to toggle edge labels on and off in real time.
+
+#### 4. Adaptive Physics Repulsion & Elastic Spacing
+
+- Integrated live **Node Repulsion Slider** (500 to 8000) and **Edge Length Slider** (80 to 400) allowing users to expand spatial clearance between crowded hubs and nodes dynamically.
+- Built-in **Collision Avoidance** (`avoidOverlap: 1.0`) preventing overlapping nodes and labels.
+- **Freeze / Resume Physics** button to lock the spacious configuration in place for drift-free inspection.
+- Precomputed spring coordinates expanded over a broad $[-2200, 2200]$ plane ($k = 3.6 / \sqrt{|V|}$) for generous initial visual margins.
+
+#### 5. Unified Feature Matrix ($\mathbf{X} \in \mathbb{R}^{|V| \times 16}$)
 
 | Feature Dimension | Name | Description | Value Range |
 | :--- | :--- | :--- | :---: |
@@ -213,13 +222,14 @@ python generate_homogeneous_graph.py
 | `feat_14` | `tot_deg_norm` | Total node degree centrality (Min-Max scaled) | $[0.0, 1.0]$ |
 | `feat_15` | `weighted_deg_norm` | Weighted degree centrality sum (Min-Max scaled) | $[0.0, 1.0]$ |
 
-6. **Dynamic Visual & Machine-Learning Outputs**:
-   - `homogeneous_graph.json`: Full graph schema (nodes, features, edge indices, spatial coordinates).
-   - `homogeneous_nodes.csv`: Node table with normalized feature dimensions, category classifications, and $(x, y)$ positions.
-   - `homogeneous_edges.csv`: Edge table with source/target indices, relation types, and normalized weights.
-   - `homogeneous_pyg_data.pt`: PyTorch Geometric `Data(x=[|V|, 16], edge_index=[2, |E|], edge_attr=[|E|, 4])` artifact.
-   - `homogeneous_graph_view.html`: Standalone interactive web view with search by PID/name/service, category filters, live repulsion controls, edge label toggle, and 16D feature inspector.
-   - `homogeneous_graph_preview.png`: Publication-grade high-resolution static rendering.
+#### 6. Dynamic Visual & Machine-Learning Outputs
+
+- `homogeneous_graph.json`: Full graph schema (nodes, features, edge indices, spatial coordinates).
+- `homogeneous_nodes.csv`: Node table with normalized feature dimensions, category classifications, and $(x, y)$ positions.
+- `homogeneous_edges.csv`: Edge table with source/target indices, relation types, and normalized weights.
+- `homogeneous_pyg_data.pt`: PyTorch Geometric `Data(x=[|V|, 16], edge_index=[2, |E|], edge_attr=[|E|, 4])` artifact.
+- `homogeneous_graph_view.html`: Standalone interactive web view with search by PID/name/service, category filters, live repulsion controls, edge label toggle, and 16D feature inspector.
+- `homogeneous_graph_preview.png`: Publication-grade high-resolution static rendering.
 
 > **Note**: Datasets (`telemetry.json`), intermediate CSVs, and generated graph outputs are generated dynamically on each run and are excluded from Git via `.gitignore` to preserve local privacy and prevent repository bloat.
 
@@ -262,6 +272,7 @@ Our conversion pipeline projects all heterogeneous system entities into a shared
 ### 6. Dynamic Physics Repulsion & Spatial Clearance
 
 In dense host graphs, process hubs (such as `svchost.exe` hosting dozens of sockets and memory regions) naturally collapse into visual clutter under default spring algorithms. The engine utilizes an interactive ForceAtlas2 physics simulator with:
+
 - **Inverse-Square Repulsion**: Nodes push each other away like electrostatic charges ($F \propto 1/r^2$).
 - **Elastic Springs**: Edges pull connected neighbors together.
 - **Dynamic Tunability**: Real-time browser sliders allow researchers to scale repulsion and spring distances on the fly to inspect dense subgraphs.
@@ -294,7 +305,6 @@ The hub provides:
 - `[6]` Instant Security Triage & Graph Topology Insights (Flagged RWX memory, top hubs)
 - `[7]` Recompile Native C++ Collector
 
-
 ### Option 2: Step-by-Step Manual CLI Execution
 
 Run each stage individually in your terminal:
@@ -317,4 +327,3 @@ Open `homogeneous_graph_view.html` in any browser to inspect the resulting inter
 ## 🛡️ License
 
 This project is licensed under the MIT License.
-
