@@ -42,6 +42,8 @@ graph_conversion/
 ├── CMakeLists.txt                    # Standard CMake build configuration
 ├── Makefile                          # MinGW / GCC makefile
 ├── build.bat                         # 1-click Windows compilation script
+├── run_hub.bat                       # 1-click interactive pipeline launcher
+├── nexus_graph_hub.py                # Interactive CLI navigation & forensics hub
 ├── README.md                         # Project documentation
 │
 ├── include/                          # C++20 Header files
@@ -268,7 +270,34 @@ In dense host graphs, process hubs (such as `svchost.exe` hosting dozens of sock
 
 ## 🚀 Complete Pipeline Execution Guide
 
-Run the full workflow locally with three simple commands:
+You can run the engine using the **Interactive Navigation Hub** or via direct CLI steps:
+
+### Option 1: 1-Click Interactive Console Hub (Recommended)
+
+Run the interactive cyber-forensics command hub for a guided, menu-driven workflow with pre-flight checks, instant security triage summaries, and browser launching:
+
+```powershell
+# Double-click run_hub.bat OR run via terminal:
+.\run_hub.bat
+
+# Or launch directly with Python:
+python nexus_graph_hub.py
+```
+
+The hub provides:
+
+- `[1]` Autonomous End-to-End Pipeline (Collect $\to$ Clean $\to$ Graph $\to$ Launch View)
+- `[2]` Phase 1: Live Telemetry Snapshot
+- `[3]` Phase 2: Telemetry Sanitization & CSV Structuring
+- `[4]` Phase 3: Homogeneous Graph Conversion & GNN Tensor Export
+- `[5]` Launch Interactive Graph Visualizer in Browser
+- `[6]` Instant Security Triage & Graph Topology Insights (Flagged RWX memory, top hubs)
+- `[7]` Recompile Native C++ Collector
+
+
+### Option 2: Step-by-Step Manual CLI Execution
+
+Run each stage individually in your terminal:
 
 ```powershell
 # 1. Capture live system execution state (run terminal as Administrator for SeDebugPrivilege)
