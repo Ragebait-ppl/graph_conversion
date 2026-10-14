@@ -31,11 +31,13 @@ Makefile.cmake
 references/
 Project_context.md
 
-# Telemetry datasets, generated tables, and graph artifacts (local to each run)
+# Telemetry datasets, logs, generated tables, and graph artifacts (local to each run)
 telemetry.json
+*telemetry*.json
+homogeneous_graph.json
+*.json
 *.csv
 *.pt
 *.png
-homogeneous_graph.json
-homogeneous_graph_view.html
-
+*.html
+*.log
