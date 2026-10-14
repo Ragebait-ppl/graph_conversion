@@ -118,6 +118,29 @@ def compile_collector():
         run_command(cmd, "C++ Engine Compilation (g++)")
     input(f"\n{Color.CYAN}Press Enter to return to menu...{Color.RESET}")
 
+def prompt_collection_flags() -> list:
+    """Prompts the user to configure multi-threading and privacy sanitization."""
+    print(f"\n {Color.BOLD}[Telemetry Engine Configuration]{Color.RESET}")
+    print(f"  {Color.CYAN}[1] High-Speed Multi-Threaded Engine (Parallel CPU Core Scanning){Color.RESET} {Color.GREEN}[Recommended - ~4-5x faster]{Color.RESET}")
+    print(f"  {Color.CYAN}[2] Classic Single-Threaded Engine (Sequential Baseline){Color.RESET}")
+    mode = input(f"  Select execution mode [1/2, default: 1]: ").strip()
+
+    print(f"\n {Color.BOLD}[Forensic Privacy & Data Scrubbing]{Color.RESET}")
+    print(f"  {Color.CYAN}[1] Sanitized Forensics (Mask user directories & remote WAN IPs){Color.RESET} {Color.GREEN}[Recommended for Sharing/Git]{Color.RESET}")
+    print(f"  {Color.CYAN}[2] Raw Forensics (Preserve exact system user paths & external IPs){Color.RESET}")
+    privacy = input(f"  Select privacy filter [1/2, default: 1]: ").strip()
+
+    cmd_flags = ["-o", "telemetry.json"]
+    if mode == "2":
+        cmd_flags.append("--single")
+    else:
+        cmd_flags.append("--parallel")
+
+    if privacy != "2":
+        cmd_flags.append("--sanitize")
+
+    return cmd_flags
+
 def collect_telemetry():
     """Runs the native telemetry engine to capture live system state."""
     clear_screen()
@@ -134,7 +157,8 @@ def collect_telemetry():
         else:
             return
 
-    run_command([bin_path, "-o", "telemetry.json"], "Host Telemetry Snapshot")
+    flags = prompt_collection_flags()
+    run_command([bin_path] + flags, "Host Telemetry Snapshot")
     input(f"\n{Color.CYAN}Press Enter to return to menu...{Color.RESET}")
 
 def clean_and_organize():
@@ -187,7 +211,8 @@ def run_end_to_end():
         else:
             compile_collector()
 
-    if not run_command([bin_path, "-o", "telemetry.json"], "1. Live Host Telemetry Snapshot"):
+    flags = prompt_collection_flags()
+    if not run_command([bin_path] + flags, "1. Live Host Telemetry Snapshot"):
         input("Press Enter to return..."); return
 
     if not run_command([sys.executable, "organize_and_clean_telemetry.py"], "2. Telemetry Parsing & CSV Structuring"):

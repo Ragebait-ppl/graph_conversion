@@ -112,11 +112,17 @@ std::vector<MemoryRegionNode> MemoryScanner::ScanProcess(uint32_t pid) {
         return regions;
     }
 
+    static const uintptr_t s_maxAppAddress = []() {
+        SYSTEM_INFO si{};
+        GetSystemInfo(&si);
+        return reinterpret_cast<uintptr_t>(si.lpMaximumApplicationAddress);
+    }();
+
     unsigned char* pAddress = nullptr;
     MEMORY_BASIC_INFORMATION mbi{};
 
     constexpr size_t MAX_SCAN_BYTES_PER_REGION = 1024 * 1024; // 1 MB sample limit per region
-    std::vector<uint8_t> readBuffer;
+    thread_local std::vector<uint8_t> threadReadBuffer(MAX_SCAN_BYTES_PER_REGION);
 
     while (VirtualQueryEx(hProcess.get(), pAddress, &mbi, sizeof(mbi)) == sizeof(mbi)) {
         bool isCommitted = (mbi.State == MEM_COMMIT);
@@ -147,10 +153,9 @@ std::vector<MemoryRegionNode> MemoryScanner::ScanProcess(uint32_t pid) {
             // Compute Shannon entropy if readable
             size_t bytesToRead = static_cast<size_t>(std::min<uint64_t>(mbi.RegionSize, MAX_SCAN_BYTES_PER_REGION));
             if (bytesToRead > 0) {
-                readBuffer.resize(bytesToRead);
                 SIZE_T bytesRead = 0;
-                if (ReadProcessMemory(hProcess.get(), mbi.BaseAddress, readBuffer.data(), bytesToRead, &bytesRead) && bytesRead > 0) {
-                    node.shannon_entropy = CalculateShannonEntropy(readBuffer.data(), bytesRead);
+                if (ReadProcessMemory(hProcess.get(), mbi.BaseAddress, threadReadBuffer.data(), bytesToRead, &bytesRead) && bytesRead > 0) {
+                    node.shannon_entropy = CalculateShannonEntropy(threadReadBuffer.data(), bytesRead);
                     node.entropy_calculated = true;
                 }
             }
@@ -158,10 +163,10 @@ std::vector<MemoryRegionNode> MemoryScanner::ScanProcess(uint32_t pid) {
             regions.push_back(std::move(node));
         }
 
-        // Advance to next region, checking for 64-bit address wraparound
+        // Advance to next region, checking for 64-bit address wraparound and user space boundary
         uintptr_t nextAddr = reinterpret_cast<uintptr_t>(mbi.BaseAddress) + mbi.RegionSize;
-        if (nextAddr <= reinterpret_cast<uintptr_t>(mbi.BaseAddress)) {
-            break; // Address space wrapped around
+        if (nextAddr <= reinterpret_cast<uintptr_t>(mbi.BaseAddress) || nextAddr >= s_maxAppAddress) {
+            break; // Address space wrapped around or reached kernel space limit
         }
         pAddress = reinterpret_cast<unsigned char*>(nextAddr);
     }

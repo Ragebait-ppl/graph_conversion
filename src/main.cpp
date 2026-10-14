@@ -16,6 +16,11 @@
 #include "network_mapper.hpp"
 #include "json_serializer.hpp"
 
+#include <thread>
+#include <atomic>
+#include <regex>
+#include <algorithm>
+
 namespace {
 
 std::string GetCurrentUtcIso8601() {
@@ -54,7 +59,7 @@ std::string GetOsVersionString() {
 
 void PrintBanner() {
     std::cerr << "=================================================================\n";
-    std::cerr << "  Windows Telemetry & Memory Forensics Engine (Phase 1)\n";
+    std::cerr << "  Windows Telemetry & Memory Forensics Engine (C++20 Native)\n";
     std::cerr << "=================================================================\n";
 }
 
@@ -62,6 +67,10 @@ void PrintUsage(const char* exeName) {
     std::cout << "Usage: " << exeName << " [options]\n\n"
               << "Options:\n"
               << "  -o, --output <file>    Specify output JSON path (default: telemetry.json)\n"
+              << "  -t, --threads <N>      Number of memory scanner worker threads (default: 1)\n"
+              << "      --parallel         Auto-detect CPU cores and run in high-speed parallel mode\n"
+              << "      --single           Force classic single-threaded sequential execution\n"
+              << "      --sanitize         Scrub Windows usernames and mask remote IPs for privacy\n"
               << "  -s, --stdout           Print complete JSON to standard output\n"
               << "  -q, --quiet            Suppress console status messages\n"
               << "  -h, --help             Show this help menu\n";
@@ -73,6 +82,8 @@ int main(int argc, char* argv[]) {
     std::string outputFile = "telemetry.json";
     bool printStdout = false;
     bool quiet = false;
+    int numThreads = 1;
+    bool sanitizeData = false;
 
     // Parse command line arguments
     for (int i = 1; i < argc; ++i) {
@@ -84,6 +95,20 @@ int main(int argc, char* argv[]) {
                 std::cerr << "Error: --output requires a file path argument.\n";
                 return 1;
             }
+        } else if (arg == "-t" || arg == "--threads") {
+            if (i + 1 < argc) {
+                numThreads = std::max(1, std::stoi(argv[++i]));
+            } else {
+                std::cerr << "Error: --threads requires an integer count.\n";
+                return 1;
+            }
+        } else if (arg == "--parallel") {
+            numThreads = static_cast<int>(std::thread::hardware_concurrency());
+            if (numThreads < 1) numThreads = 4;
+        } else if (arg == "--single") {
+            numThreads = 1;
+        } else if (arg == "--sanitize") {
+            sanitizeData = true;
         } else if (arg == "-s" || arg == "--stdout") {
             printStdout = true;
         } else if (arg == "-q" || arg == "--quiet") {
@@ -144,22 +169,68 @@ int main(int argc, char* argv[]) {
 
     // 3. Virtual Memory Scanning & Shannon Entropy
     if (!quiet) {
-        std::cerr << "[*] Scanning virtual memory for unbacked executable regions...\n";
+        if (numThreads > 1) {
+            std::cerr << "[*] Scanning virtual memory in Parallel Mode (" << numThreads << " worker threads)...\n";
+        } else {
+            std::cerr << "[*] Scanning virtual memory in Single-Threaded Mode (sequential)...\n";
+        }
     }
-    telemetry::MemoryScanner memScanner;
     size_t unbackedCount = 0;
 
-    for (const auto& p : graph.processes) {
-        if (p.pid == 0 || p.pid == 4) continue;
+    if (numThreads <= 1) {
+        // Classic Single-Threaded Sequential Mode
+        telemetry::MemoryScanner memScanner;
+        for (const auto& p : graph.processes) {
+            if (p.pid == 0 || p.pid == 4) continue;
 
-        auto regions = memScanner.ScanProcess(p.pid);
-        for (auto& r : regions) {
-            if (r.is_unbacked) {
-                unbackedCount++;
+            auto regions = memScanner.ScanProcess(p.pid);
+            for (auto& r : regions) {
+                if (r.is_unbacked) {
+                    unbackedCount++;
+                }
+                graph.has_memory.push_back({p.pid, r.id});
+                graph.memory_regions.push_back(std::move(r));
             }
-            // Link Process -> Memory Region Edge
-            graph.has_memory.push_back({p.pid, r.id});
-            graph.memory_regions.push_back(std::move(r));
+        }
+    } else {
+        // Optimized Multi-Threaded Worker Pool Mode
+        std::vector<uint32_t> targetPids;
+        for (const auto& p : graph.processes) {
+            if (p.pid != 0 && p.pid != 4) {
+                targetPids.push_back(p.pid);
+            }
+        }
+
+        std::atomic<size_t> nextPidIdx{0};
+        std::vector<std::vector<telemetry::MemoryRegionNode>> threadResults(numThreads);
+        std::vector<std::thread> workers;
+
+        for (int t = 0; t < numThreads; ++t) {
+            workers.emplace_back([&, t]() {
+                telemetry::MemoryScanner localScanner;
+                while (true) {
+                    size_t idx = nextPidIdx.fetch_add(1);
+                    if (idx >= targetPids.size()) break;
+                    auto regions = localScanner.ScanProcess(targetPids[idx]);
+                    for (auto& r : regions) {
+                        threadResults[t].push_back(std::move(r));
+                    }
+                }
+            });
+        }
+
+        for (auto& w : workers) {
+            w.join();
+        }
+
+        for (auto& res : threadResults) {
+            for (auto& r : res) {
+                if (r.is_unbacked) {
+                    unbackedCount++;
+                }
+                graph.has_memory.push_back({r.pid, r.id});
+                graph.memory_regions.push_back(std::move(r));
+            }
         }
     }
 
@@ -175,7 +246,32 @@ int main(int argc, char* argv[]) {
         graph.connected_to.push_back({s.pid, s.id});
     }
 
-    // 5. Finalize Metadata & Timings
+    // 5. Optional Privacy Sanitization Filter
+    if (sanitizeData) {
+        if (!quiet) {
+            std::cerr << "[+] Applying privacy filter (Sanitizing user paths and remote IP addresses)...\n";
+        }
+        std::wregex userPathRegex(LR"(C:\\Users\\[^\\]+)", std::regex_constants::icase);
+        for (auto& p : graph.processes) {
+            p.executable_path = std::regex_replace(p.executable_path, userPathRegex, L"C:\\Users\\USER");
+            for (auto& m : p.modules) {
+                m.module_path = std::regex_replace(m.module_path, userPathRegex, L"C:\\Users\\USER");
+            }
+        }
+        for (auto& s : graph.sockets) {
+            if (!s.remote_address.empty() && 
+                s.remote_address != "0.0.0.0" && 
+                s.remote_address != "127.0.0.1" && 
+                s.remote_address != "::" && 
+                s.remote_address != "::1" && 
+                !s.remote_address.starts_with("192.168.") && 
+                !s.remote_address.starts_with("10.")) {
+                s.remote_address = "10.0.0.X";
+            }
+        }
+    }
+
+    // 6. Finalize Metadata & Timings
     auto endTime = std::chrono::high_resolution_clock::now();
     double durationMs = std::chrono::duration<double, std::milli>(endTime - startTime).count();
 
@@ -186,7 +282,7 @@ int main(int argc, char* argv[]) {
     graph.metadata.unbacked_executable_regions = unbackedCount;
     graph.metadata.total_sockets = graph.sockets.size();
 
-    // 6. JSON Serialization & Output
+    // 7. JSON Serialization & Output
     std::string jsonOutput = telemetry::JsonSerializer::Serialize(graph, true);
 
     if (!outputFile.empty()) {
@@ -207,7 +303,9 @@ int main(int argc, char* argv[]) {
     if (!quiet) {
         std::cerr << "-----------------------------------------------------------------\n";
         std::cerr << " Scan Summary:\n";
-        std::cerr << "  - Elapsed Time: " << std::fixed << std::setprecision(1) << durationMs << " ms\n";
+        std::cerr << "  - Elapsed Time:         " << std::fixed << std::setprecision(1) << durationMs << " ms\n";
+        std::cerr << "  - Engine Mode:          " << (numThreads > 1 ? ("Multi-Threaded (" + std::to_string(numThreads) + " threads)") : "Single-Threaded") << "\n";
+        std::cerr << "  - Privacy Sanitizer:    " << (sanitizeData ? "ACTIVE (Usernames & WAN IPs masked)" : "OFF") << "\n";
         std::cerr << "  - Processes Enumerated: " << graph.metadata.total_processes << "\n";
         std::cerr << "  - Threads Tracked:      " << graph.metadata.total_threads << "\n";
         std::cerr << "  - Executable Regions:   " << graph.metadata.total_memory_regions << "\n";

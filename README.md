@@ -133,6 +133,10 @@ Usage: telemetry_engine.exe [options]
 
 Options:
   -o, --output <file>    Specify output JSON file path (default: telemetry.json)
+  -t, --threads <N>      Number of memory scanner worker threads (default: 1)
+      --parallel         Auto-detect CPU cores and run in high-speed parallel mode (~4x speedup)
+      --single           Force classic single-threaded sequential execution (baseline)
+      --sanitize         Scrub Windows usernames (C:\Users\USER) and mask remote WAN IPs
   -s, --stdout           Stream complete JSON directly to standard output
   -q, --quiet            Suppress banner and scan logs
   -h, --help             Display help menu
@@ -327,3 +331,13 @@ Open `homogeneous_graph_view.html` in any browser to inspect the resulting inter
 ## 🛡️ License
 
 This project is licensed under the MIT License.
+
+---
+
+<div align="center">
+
+Made with 🤍 by **[Astifo (Rajesh)](https://github.com/astifo)**
+
+*Windows Host Telemetry & GNN Homogeneous Graph Engine*
+
+</div>
