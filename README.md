@@ -192,13 +192,15 @@ python generate_homogeneous_graph.py
    - Network attributes (protocol, ports, socket state)
    - Graph structural metrics (in-degree, out-degree, total degree, weighted degree)
    - Continuous features normalized via Min-Max scaling to $[0, 1]$
-5. **Visual & Machine-Learning Outputs**:
+5. **Dynamic Visual & Machine-Learning Outputs**:
    - `homogeneous_graph.json`: Full graph schema (nodes, features, edge indices, spatial coordinates).
    - `homogeneous_nodes.csv`: Node table with normalized feature dimensions, category classifications, and $(x, y)$ positions.
    - `homogeneous_edges.csv`: Edge table with source/target indices, relation types, and normalized weights.
-   - `homogeneous_pyg_data.pt`: PyTorch Geometric `Data(x=[923, 16], edge_index=[2, 904], edge_attr=[904, 4])` artifact.
+   - `homogeneous_pyg_data.pt`: PyTorch Geometric `Data(x=[|V|, 16], edge_index=[2, |E|], edge_attr=[|E|, 4])` artifact.
    - `homogeneous_graph_view.html`: Standalone interactive web view with search by PID/name/service, category filters, live repulsion controls, and 16D feature inspector.
    - `homogeneous_graph_preview.png`: Publication-grade high-resolution static rendering.
+
+> **Note**: Datasets (`telemetry.json`), intermediate CSVs, and generated graph outputs are generated dynamically on each run and are excluded from Git via `.gitignore` to preserve local privacy and prevent repository bloat.
 
 ---
 

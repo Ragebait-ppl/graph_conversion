@@ -30,3 +30,12 @@ Makefile.cmake
 # Non-dev references and private context documents
 references/
 Project_context.md
+
+# Telemetry datasets, generated tables, and graph artifacts (local to each run)
+telemetry.json
+*.csv
+*.pt
+*.png
+homogeneous_graph.json
+homogeneous_graph_view.html
+
