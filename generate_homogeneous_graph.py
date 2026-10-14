@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Homogeneous Graph Conversion Engine (Enhanced Taxonomy & Stable Visualization)
-==============================================================================
+Homogeneous Graph Conversion Engine (Dynamic Repulsion & Spacing)
+================================================================
 Converts Windows host telemetry CSV records (nodes and weighted edges)
 into a clean, feature-rich homogeneous graph:
 - Contiguous 0-indexing for all entities (Processes, Memory regions, Sockets)
@@ -12,8 +12,8 @@ into a clean, feature-rich homogeneous graph:
     * High-Risk Unbacked Memory (H >= 6.5 or RWX) vs Standard Unbacked Memory
     * TCP Established vs TCP Listening vs UDP Endpoints
 - Formulated semantic labels with well-known port/service identification
-- Deterministic, stable layout (artificial repulsion and dynamic drift removed)
-- Interactive standalone HTML viewer (homogeneous_graph_view.html) with freeze-on-load stability
+- Dynamic physics repulsion engine with live spacing and spring length sliders
+- Interactive standalone HTML viewer (homogeneous_graph_view.html) with tunable repulsion
 - High-resolution static preview plot (homogeneous_graph_preview.png)
 - PyTorch Geometric (PyG) Data artifact (homogeneous_pyg_data.pt)
 """
@@ -79,7 +79,7 @@ def generate_homogeneous_graph(
     output_dir="."
 ):
     print("=" * 75)
-    print("  HOMOGENEOUS GRAPH CONVERSION ENGINE (REFINED TAXONOMY & STABLE LAYOUT)")
+    print("  HOMOGENEOUS GRAPH CONVERSION ENGINE (EXPANDED REPULSION & SPACING)")
     print("=" * 75)
 
     # 1. Load CSV data
@@ -308,27 +308,26 @@ def generate_homogeneous_graph(
     for i, col in enumerate(feature_col_names):
         nodes_df[col] = feature_matrix[:, i]
 
-    # 5. Deterministic Spatial Layout (Stable, without artificial repulsion loops)
-    print(f"[*] Calculating stable, deterministic spring layout coordinates...")
-    # Clean standard spring layout:
-    # A standard optimal k-factor gives clean, natural topological clusters
-    k_val = 1.9 / math.sqrt(len(G.nodes()))
-    pos = nx.spring_layout(G, k=k_val, iterations=85, seed=42)
+    # 5. Generous Spatial Layout with Broad Separation
+    print(f"[*] Calculating expanded layout coordinates with strong spatial separation...")
+    # High k-factor ensures generous spacing between nodes and edges
+    k_val = 3.6 / math.sqrt(len(G.nodes()))
+    pos = nx.spring_layout(G, k=k_val, iterations=100, seed=42)
 
-    scale_grid = 1400.0
+    scale_grid = 2200.0
     coords_x = np.array([pos[i][0] * scale_grid for i in range(len(G.nodes()))])
     coords_y = np.array([pos[i][1] * scale_grid for i in range(len(G.nodes()))])
 
     nodes_df["pos_x"] = np.round(coords_x, 2)
     nodes_df["pos_y"] = np.round(coords_y, 2)
-    print(f"[+] Deterministic coordinates generated: X in [{coords_x.min():.1f}, {coords_x.max():.1f}], Y in [{coords_y.min():.1f}, {coords_y.max():.1f}]")
+    print(f"[+] Spaced coordinates generated: X in [{coords_x.min():.1f}, {coords_x.max():.1f}], Y in [{coords_y.min():.1f}, {coords_y.max():.1f}]")
 
     # 6. Save Tabular CSVs
     homogeneous_nodes_csv = os.path.join(output_dir, "homogeneous_nodes.csv")
     homogeneous_edges_csv = os.path.join(output_dir, "homogeneous_edges.csv")
     
     nodes_df.to_csv(homogeneous_nodes_csv, index=False)
-    print(f"[+] Saved {homogeneous_nodes_csv} ({len(nodes_df)} nodes with refined taxonomy)")
+    print(f"[+] Saved {homogeneous_nodes_csv} ({len(nodes_df)} nodes with refined taxonomy & coordinates)")
 
     edges_out_df = pd.DataFrame(valid_edges)
     edges_out_df.to_csv(homogeneous_edges_csv, index=False)
@@ -343,7 +342,7 @@ def generate_homogeneous_graph(
 
     graph_dict = {
         "metadata": {
-            "title": "Windows Host Telemetry Homogeneous Graph (Refined)",
+            "title": "Windows Host Telemetry Homogeneous Graph (Dynamic Repulsion & Spacing)",
             "num_nodes": int(len(nodes_df)),
             "num_edges": int(len(edges_out_df)),
             "feature_dim": 16,
@@ -421,8 +420,8 @@ def generate_homogeneous_graph(
         print(f"[!] PyTorch Geometric export skipped: {ex}")
 
     # 9. High-Resolution Publication-Grade Diagram Preview Plot
-    print(f"[*] Generating refined high-resolution preview plot...")
-    plt.figure(figsize=(19, 13), facecolor="#080e1a", dpi=200)
+    print(f"[*] Generating spacious high-resolution preview plot...")
+    plt.figure(figsize=(22, 16), facecolor="#080e1a", dpi=200)
     ax = plt.gca()
     ax.set_facecolor("#080e1a")
 
@@ -460,8 +459,8 @@ def generate_homogeneous_graph(
         xs = coords_x[mask]
         ys = coords_y[mask]
         degs = [total_degrees.get(i, 1) for i in np.where(mask)[0]]
-        base_size = 55 if "process" in scat_name else (80 if "high_risk" in scat_name else 35)
-        sizes = [min(base_size + d * 3, 160) for d in degs]
+        base_size = 60 if "process" in scat_name else (85 if "high_risk" in scat_name else 40)
+        sizes = [min(base_size + d * 3, 170) for d in degs]
         
         ax.scatter(xs, ys, c=meta["color"], marker=meta["marker"], s=sizes,
                    alpha=0.88, edgecolors="#ffffff", linewidths=0.35, label=f"{meta['label']} ({sum(mask)})")
@@ -473,12 +472,12 @@ def generate_homogeneous_graph(
 
     for _, row in top_hubs.iterrows():
         i = int(row["node_idx"])
-        ax.text(coords_x[i], coords_y[i] + 28, row["clean_label"],
+        ax.text(coords_x[i], coords_y[i] + 32, row["clean_label"],
                 color="#f8fafc", fontsize=7.5, fontweight="bold",
                 ha="center", va="bottom",
                 bbox=dict(boxstyle="round,pad=0.25", facecolor="#1e293b", edgecolor="#475569", alpha=0.9))
 
-    plt.title("Windows Host Forensics Homogeneous Graph\n(Differentiated Node Categories, Formulated Labels, Stable Layout)",
+    plt.title("Windows Host Forensics Homogeneous Graph\n(Differentiated Node Categories, Formulated Labels, High Spacing)",
               color="#f8fafc", fontsize=15, fontweight="bold", pad=20)
     plt.legend(facecolor="#0f172a", edgecolor="#334155", labelcolor="#f8fafc",
                loc="upper right", fontsize=9, framealpha=0.9)
@@ -490,8 +489,8 @@ def generate_homogeneous_graph(
     plt.close()
     print(f"[+] Saved refined preview: {preview_img_path}")
 
-    # 10. Interactive HTML Visualization (Deterministic, Stable, No Repulsion Slider)
-    print(f"[*] Building refined standalone interactive HTML view...")
+    # 10. Interactive HTML Visualization with Node Repulsion & Spacing Controls
+    print(f"[*] Building interactive HTML view with live Node Repulsion & Spacing controls...")
     html_out_path = os.path.join(output_dir, "homogeneous_graph_view.html")
     
     vis_nodes = []
@@ -597,7 +596,7 @@ def generate_homogeneous_graph(
             box-shadow: 4px 0 24px rgba(0,0,0,0.5);
         }}
         .header {{
-            padding: 18px 20px;
+            padding: 16px 20px;
             border-bottom: 1px solid #1e293b;
         }}
         .header h1 {{
@@ -613,7 +612,7 @@ def generate_homogeneous_graph(
             color: #94a3b8;
         }}
         .search-box {{
-            padding: 14px 20px;
+            padding: 12px 20px;
             border-bottom: 1px solid #1e293b;
         }}
         .search-input {{
@@ -632,14 +631,14 @@ def generate_homogeneous_graph(
             box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
         }}
         .filter-group {{
-            padding: 12px 20px;
+            padding: 10px 20px;
             display: flex;
             gap: 6px;
             flex-wrap: wrap;
             border-bottom: 1px solid #1e293b;
         }}
         .filter-btn {{
-            padding: 5px 10px;
+            padding: 5px 9px;
             border-radius: 6px;
             font-size: 11px;
             font-weight: 600;
@@ -656,14 +655,35 @@ def generate_homogeneous_graph(
         .filter-btn:hover {{ opacity: 0.85; transform: translateY(-1px); }}
         
         .controls {{
-            padding: 12px 20px;
+            padding: 14px 20px;
             border-bottom: 1px solid #1e293b;
+        }}
+        .slider-row {{
+            margin-bottom: 12px;
+        }}
+        .slider-label {{
+            font-size: 11.5px;
+            color: #94a3b8;
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+        }}
+        .slider-label strong {{
+            color: #38bdf8;
+        }}
+        .slider {{
+            width: 100%;
+            accent-color: #38bdf8;
+            cursor: pointer;
+        }}
+        .button-row {{
             display: flex;
             gap: 8px;
+            margin-top: 8px;
         }}
         .btn-action {{
             flex: 1;
-            padding: 8px 12px;
+            padding: 8px 10px;
             border-radius: 6px;
             background: #2563eb;
             color: white;
@@ -671,7 +691,7 @@ def generate_homogeneous_graph(
             font-size: 11px;
             border: none;
             cursor: pointer;
-            transition: background 0.2s;
+            transition: all 0.2s;
         }}
         .btn-action:hover {{ background: #1d4ed8; }}
         .btn-secondary {{ background: #334155; }}
@@ -679,11 +699,11 @@ def generate_homogeneous_graph(
         
         .inspector {{
             flex: 1;
-            padding: 18px 20px;
+            padding: 16px 20px;
             overflow-y: auto;
         }}
         .inspector-title {{
-            font-size: 12px;
+            font-size: 11.5px;
             text-transform: uppercase;
             letter-spacing: 0.05em;
             color: #64748b;
@@ -750,7 +770,7 @@ def generate_homogeneous_graph(
             position: absolute;
             top: 20px;
             right: 20px;
-            background: rgba(15, 23, 42, 0.92);
+            background: rgba(15, 23, 42, 0.94);
             backdrop-filter: blur(8px);
             border: 1px solid #334155;
             padding: 12px 16px;
@@ -776,7 +796,7 @@ def generate_homogeneous_graph(
             position: absolute;
             bottom: 20px;
             right: 20px;
-            background: rgba(15, 23, 42, 0.92);
+            background: rgba(15, 23, 42, 0.94);
             backdrop-filter: blur(8px);
             border: 1px solid #334155;
             padding: 10px 16px;
@@ -803,15 +823,32 @@ def generate_homogeneous_graph(
         </div>
         <div class="filter-group">
             <button class="filter-btn btn-all" onclick="filterType('all')">All ({len(nodes_df)})</button>
-            <button class="filter-btn btn-sys" onclick="filterType('system_process')">System (OS)</button>
+            <button class="filter-btn btn-sys" onclick="filterType('system_process')">System</button>
             <button class="filter-btn btn-proc" onclick="filterType('user_process')">User Apps</button>
             <button class="filter-btn btn-alert" onclick="filterType('high_risk_memory')">High-Risk Mem</button>
             <button class="filter-btn btn-mem" onclick="filterType('normal_memory')">Unbacked Mem</button>
             <button class="filter-btn btn-sock" onclick="filterType('sockets')">Sockets</button>
         </div>
         <div class="controls">
-            <button class="btn-action btn-secondary" onclick="network.fit({{animation: true}})">Fit View to Screen</button>
-            <button class="btn-action btn-secondary" onclick="resetSelection()">Clear Filter</button>
+            <div class="slider-row">
+                <div class="slider-label">
+                    <span>Node Repulsion (Spacing)</span>
+                    <strong id="repulsion-val">2500</strong>
+                </div>
+                <input type="range" min="500" max="8000" step="100" value="2500" class="slider" id="repulsion-slider">
+            </div>
+            <div class="slider-row">
+                <div class="slider-label">
+                    <span>Edge Length (Spring Distance)</span>
+                    <strong id="edge-len-val">160</strong>
+                </div>
+                <input type="range" min="80" max="400" step="10" value="160" class="slider" id="edge-len-slider">
+            </div>
+            <div class="button-row">
+                <button class="btn-action" id="physics-toggle-btn" onclick="togglePhysics()">Freeze Physics</button>
+                <button class="btn-action btn-secondary" onclick="network.fit({{animation: true}})">Fit Screen</button>
+                <button class="btn-action btn-secondary" onclick="resetSelection()">Reset</button>
+            </div>
         </div>
         <div class="inspector" id="inspector">
             <div class="inspector-title">Entity Telemetry & Feature Vector</div>
@@ -839,7 +876,7 @@ def generate_homogeneous_graph(
             <div class="stats-item">Total Nodes: <strong>{len(nodes_df)}</strong></div>
             <div class="stats-item">Edges: <strong>{len(valid_edges)}</strong></div>
             <div class="stats-item">Features: <strong>16-D Tensor</strong></div>
-            <div class="stats-item">Layout: <strong>Deterministic Static</strong></div>
+            <div class="stats-item">Physics: <strong id="physics-status">Live Dynamic</strong></div>
         </div>
     </div>
 
@@ -853,7 +890,10 @@ def generate_homogeneous_graph(
         const container = document.getElementById('network');
         const data = {{ nodes: nodesDataSet, edges: edgesDataSet }};
 
-        // Deterministic stable configuration: physics disabled after precalculated coordinates
+        let currentRepulsion = 2500;
+        let currentSpringLength = 160;
+        let physicsEnabled = true;
+
         const options = {{
             nodes: {{
                 font: {{ color: '#f8fafc', size: 10, face: '-apple-system, BlinkMacSystemFont, Segoe UI, Roboto' }},
@@ -864,16 +904,72 @@ def generate_homogeneous_graph(
                 smooth: {{ type: 'continuous', roundness: 0.15 }}
             }},
             physics: {{
-                enabled: false  // Fully deterministic static layout; no dynamic repulsion or jitter
+                enabled: true,
+                solver: 'forceAtlas2Based',
+                forceAtlas2Based: {{
+                    gravitationalConstant: -currentRepulsion,
+                    centralGravity: 0.003,
+                    springLength: currentSpringLength,
+                    springConstant: 0.08,
+                    damping: 0.88,
+                    avoidOverlap: 1.0
+                }},
+                stabilization: {{
+                    iterations: 120,
+                    updateInterval: 25
+                }}
             }},
             interaction: {{
                 hover: true,
                 tooltipDelay: 100,
-                hideEdgesOnDrag: false
+                hideEdgesOnDrag: true
             }}
         }};
 
         const network = new vis.Network(container, data, options);
+
+        // Repulsion Slider
+        document.getElementById('repulsion-slider').addEventListener('input', function(e) {{
+            currentRepulsion = parseInt(e.target.value);
+            document.getElementById('repulsion-val').innerText = currentRepulsion;
+            network.setOptions({{
+                physics: {{
+                    forceAtlas2Based: {{
+                        gravitationalConstant: -currentRepulsion
+                    }}
+                }}
+            }});
+        }});
+
+        // Edge Length Slider
+        document.getElementById('edge-len-slider').addEventListener('input', function(e) {{
+            currentSpringLength = parseInt(e.target.value);
+            document.getElementById('edge-len-val').innerText = currentSpringLength;
+            network.setOptions({{
+                physics: {{
+                    forceAtlas2Based: {{
+                        springLength: currentSpringLength
+                    }}
+                }}
+            }});
+        }});
+
+        // Toggle Physics Freeze / Live
+        function togglePhysics() {{
+            physicsEnabled = !physicsEnabled;
+            network.setOptions({{ physics: {{ enabled: physicsEnabled }} }});
+            const btn = document.getElementById('physics-toggle-btn');
+            const status = document.getElementById('physics-status');
+            if (physicsEnabled) {{
+                btn.innerText = 'Freeze Physics';
+                btn.style.background = '#2563eb';
+                status.innerText = 'Live Dynamic';
+            }} else {{
+                btn.innerText = 'Resume Physics';
+                btn.style.background = '#059669';
+                status.innerText = 'Frozen';
+            }}
+        }}
 
         // Selection Inspector
         network.on('click', function(params) {{
@@ -909,7 +1005,7 @@ def generate_homogeneous_graph(
                 <p><b>PID:</b> ${{node.pid}}</p>
                 <p><b>Name:</b> ${{node.name}}</p>
                 <p><b>Degree:</b> ${{node.degree}} (In: ${{node.in_deg}}, Out: ${{node.out_deg}})</p>
-                <p><b>Static Coords:</b> (${{node.x}}, ${{node.y}})</p>
+                <p><b>Coordinates:</b> (${{node.x}}, ${{node.y}})</p>
                 <div style="margin-top: 10px;">
                     <b style="color: #cbd5e1;">Normalized 16D Feature Tensor:</b>
                     <table class="tensor-table">
@@ -958,7 +1054,7 @@ def generate_homogeneous_graph(
 """
     with open(html_out_path, "w", encoding="utf-8") as f:
         f.write(html_content)
-    print(f"[+] Saved refined interactive HTML viewer: {html_out_path}")
+    print(f"[+] Saved interactive HTML viewer: {html_out_path}")
 
     print("=" * 75)
     print("  HOMOGENEOUS GRAPH CONVERSION COMPLETED SUCCESSFULLY")

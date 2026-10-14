@@ -166,9 +166,11 @@ python generate_homogeneous_graph.py
    - **TCP Established** (`#10b981` Green Triangle): Active network channels with destination service identification (`:443 (HTTPS)`).
    - **TCP Listening** (`#38bdf8` Sky Blue Down-Triangle): Local listening daemons (`:135 (RPC/EPMAP)`).
    - **UDP Sockets** (`#14b8a6` Teal Hexagon): Datagram endpoints (`:5353 (mDNS)`).
-3. **Deterministic Stable Spatial Layout (Repulsion Jitter Removed)**:
-   - Uses precomputed NetworkX spring coordinates with fixed seed for guaranteed layout repeatability.
-   - Dynamic browser physics simulation and artificial repulsion adjustments have been replaced with a deterministic static view for instantaneous loading and lag-free inspection.
+3. **Adaptive Physics Repulsion & Elastic Spacing**:
+   - Integrated live **Node Repulsion Slider** (500 to 8000) and **Edge Length Slider** (80 to 400) allowing users to expand spatial clearance between crowded hubs and nodes dynamically.
+   - Built-in **Collision Avoidance** (`avoidOverlap: 1.0`) preventing overlapping nodes and labels.
+   - **Freeze / Resume Physics** button to lock the spacious configuration in place for drift-free inspection.
+   - Precomputed spring coordinates expanded over a broad $[-2200, 2200]$ plane ($k = 3.6 / \sqrt{|V|}$) for generous initial visual margins.
 4. **Unified Feature Matrix ($\mathbf{X} \in \mathbb{R}^{|V| \times 16}$)**:
    - Entity type one-hot encoding
    - Process attributes (threads, modules, privilege status)
