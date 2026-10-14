@@ -22,15 +22,15 @@ An end-to-end framework for capturing low-level Windows host execution states, s
                                                                           v
 +--------------------------+     +--------------------------+     +--------------------------+
 | GNN-Ready Artifacts      | <-- | Homogeneous Graph        | <-- | Tabular Datasets (CSVs)  |
-| - PyG Data Object        |     | Conversion Engine        |     | - nodes.csv              |
+| - PyG Data Tensor (.pt)  |     | Conversion Engine        |     | - nodes.csv              |
 | - 0-indexed Node Tensor  |     | (Proper Labeling, Index, |     | - weighted_edges.csv     |
-| - Interactive HTML View  |     | Node Spacing & Scaling)  |     |                          |
+| - Stable Interactive View|     | Deterministic Coordinates|     |                          |
 +--------------------------+     +--------------------------+     +--------------------------+
 ```
 
 1. **Host Telemetry Collection (Phase 1)**: Captures running processes, process parentage (PPID), thread counts, loaded modules, unbacked executable virtual memory regions (with Shannon entropy calculation), and TCP/UDP sockets at an instantaneous moment.
 2. **Data Serialization**: Serializes real-time metrics into `telemetry.json` and decomposes them into sorted, structured CSVs (`telemetry_graph_nodes.csv`, `telemetry_graph_weighted_edges.csv`).
-3. **Homogeneous Graph Conversion (Phase 2)**: Transforms heterogeneous host entities into a unified homogeneous graph with contiguous 0-indexing, balanced spatial node distribution (preventing visual clutter), multi-dimensional normalized feature vectors, and interactive graph rendering.
+3. **Homogeneous Graph Conversion (Phase 2)**: Transforms heterogeneous host entities into a unified homogeneous graph with contiguous 0-indexing, differentiated node taxonomy, formulated semantic labels, multi-dimensional normalized feature vectors, deterministic spatial layout, and interactive graph rendering.
 4. **GNN Modeling (Future Phase)**: Ingests the homogeneous graph into GNN architectures (GCN, GAT, GraphSAGE) for malicious process classification and anomalous subgraph detection.
 
 ---
@@ -64,7 +64,7 @@ graph_conversion/
 │   └── telemetry_engine.exe
 │
 ├── organize_and_clean_telemetry.py   # Telemetry JSON-to-CSV organizer
-├── generate_homogeneous_graph.py    # Feature-rich Homogeneous Graph converter
+├── generate_homogeneous_graph.py    # Refined Homogeneous Graph converter
 │
 ├── references/                       # Presentations and background documents (local, git ignored)
 └── Project_context.md                # In-depth architectural & conceptual guide (local, git ignored)
@@ -76,6 +76,7 @@ graph_conversion/
 
 ### C++ Compiler
 - **MinGW-w64** (GCC 11+) OR **MSVC** (Visual Studio 2022+) with C++20 support.
+- Native build linking `ws2_32`, `iphlpapi`, `psapi`, `advapi32`. Pure native machine code (no .NET runtime).
 
 ### Python Environment
 - Python 3.10+
@@ -155,22 +156,32 @@ Run the converter:
 python generate_homogeneous_graph.py
 ```
 
-### Key Capabilities:
+### Key Capabilities & Taxonomy Refinements:
 1. **Contiguous Node Indexing**: Maps all system entities (Processes, Memory regions, Sockets) to a contiguous sequence $0, 1, \dots, |V|-1$.
-2. **Unified Feature Matrix ($\mathbf{X} \in \mathbb{R}^{|V| \times d}$)**:
+2. **Differentiated Node Taxonomy**:
+   - **System Core Processes** (`#818cf8` Indigo Diamond): OS infrastructure binaries (`services.exe`, `lsass.exe`, `svchost.exe`).
+   - **User / App Processes** (`#00e5ff` Cyan Dot): User-space applications and scripts (`powershell.exe`, `chrome.exe`).
+   - **High-Risk Memory** (`#f43f5e` Crimson Star): Unbacked executable private pages with Shannon Entropy $H \ge 6.5$ or RWX permissions.
+   - **Normal Unbacked Memory** (`#f59e0b` Amber Square): Standard unbacked code buffers ($H < 6.5$).
+   - **TCP Established** (`#10b981` Green Triangle): Active network channels with destination service identification (`:443 (HTTPS)`).
+   - **TCP Listening** (`#38bdf8` Sky Blue Down-Triangle): Local listening daemons (`:135 (RPC/EPMAP)`).
+   - **UDP Sockets** (`#14b8a6` Teal Hexagon): Datagram endpoints (`:5353 (mDNS)`).
+3. **Deterministic Stable Spatial Layout (Repulsion Jitter Removed)**:
+   - Uses precomputed NetworkX spring coordinates with fixed seed for guaranteed layout repeatability.
+   - Dynamic browser physics simulation and artificial repulsion adjustments have been replaced with a deterministic static view for instantaneous loading and lag-free inspection.
+4. **Unified Feature Matrix ($\mathbf{X} \in \mathbb{R}^{|V| \times 16}$)**:
    - Entity type one-hot encoding
    - Process attributes (threads, modules, privilege status)
    - Memory attributes (Shannon entropy, region size, RWX flags)
    - Network attributes (protocol, ports, socket state)
-   - Graph structural metrics (in-degree, out-degree, total degree)
+   - Graph structural metrics (in-degree, out-degree, total degree, weighted degree)
    - Continuous features normalized via Min-Max scaling to $[0, 1]$
-3. **Optimized Node Spacing & Scaling**:
-   - Force-directed physics layout with expanded repulsion ($k$-factor) ensuring nodes have ample visual and spatial breathing room.
-4. **Visual & Machine-Learning Outputs**:
+5. **Visual & Machine-Learning Outputs**:
    - `homogeneous_graph.json`: Full graph schema (nodes, features, edge indices, spatial coordinates).
-   - `homogeneous_nodes.csv`: Node table with normalized feature dimensions and $(x, y)$ positions.
+   - `homogeneous_nodes.csv`: Node table with normalized feature dimensions, category classifications, and $(x, y)$ positions.
    - `homogeneous_edges.csv`: Edge table with source/target indices, relation types, and normalized weights.
-   - `homogeneous_graph_view.html`: Standalone interactive web view with dark mode, search, and physics stabilization.
+   - `homogeneous_pyg_data.pt`: PyTorch Geometric `Data(x=[923, 16], edge_index=[2, 904], edge_attr=[904, 4])` artifact.
+   - `homogeneous_graph_view.html`: Standalone interactive web view with search by PID/name/service, category filters, and 16D feature inspector.
    - `homogeneous_graph_preview.png`: Publication-grade high-resolution static rendering.
 
 ---
