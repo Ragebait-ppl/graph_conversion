@@ -1,4 +1,4 @@
-# Graph Conversion & Host Forensics Telemetry Engine
+# GraphVerse: Host Forensics & Homogeneous Graph Conversion Engine
 
 [![Platform](https://img.shields.io/badge/Platform-Windows%2010%20%2F%2011%20x64-0078D6?logo=windows)](https://microsoft.com)
 [![Language](https://img.shields.io/badge/Language-C%2B%2B20-blue.svg?logo=c%2B%2B)](https://isocpp.org)
@@ -43,7 +43,7 @@ graph_conversion/
 ├── Makefile                          # MinGW / GCC makefile
 ├── build.bat                         # 1-click Windows compilation script
 ├── run_hub.bat                       # 1-click interactive pipeline launcher
-├── nexus_graph_hub.py                # Interactive CLI navigation & forensics hub
+├── graphverse_hub.py                 # Interactive CLI navigation & forensics hub
 ├── README.md                         # Project documentation
 │
 ├── include/                          # C++20 Header files
@@ -285,18 +285,18 @@ In dense host graphs, process hubs (such as `svchost.exe` hosting dozens of sock
 
 ## 🚀 Complete Pipeline Execution Guide
 
-You can run the engine using the **Interactive Navigation Hub** or via direct CLI steps:
+You can run the engine using the **GraphVerse Interactive Hub** or via direct CLI steps:
 
 ### Option 1: 1-Click Interactive Console Hub (Recommended)
 
-Run the interactive cyber-forensics command hub for a guided, menu-driven workflow with pre-flight checks, instant security triage summaries, and browser launching:
+Run the GraphVerse cyber-forensics command hub for a guided, menu-driven workflow with pre-flight checks, instant security triage summaries, and browser launching:
 
 ```powershell
 # Double-click run_hub.bat OR run via terminal:
 .\run_hub.bat
 
 # Or launch directly with Python:
-python nexus_graph_hub.py
+python graphverse_hub.py
 ```
 
 The hub provides:
@@ -339,6 +339,6 @@ This project is licensed under the MIT License.
 
 Made with 🤍 by **[Astifo (Rajesh)](https://github.com/astifo)**
 
-*Windows Host Telemetry & GNN Homogeneous Graph Engine*
+*GraphVerse: Windows Host Telemetry & GNN Homogeneous Graph Engine*
 
 </div>

@@ -1,5 +1,5 @@
 @echo off
-title Nexus Graph Engine Hub
+title GraphVerse Engine Hub
 cls
-python nexus_graph_hub.py
+python graphverse_hub.py
 pause

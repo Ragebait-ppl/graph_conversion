@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 ===============================================================================
-  NEXUS GRAPH ENGINE: INTERACTIVE FORENSICS & GRAPH PIPELINE HUB
+  GRAPHVERSE ENGINE: INTERACTIVE FORENSICS & GRAPH PIPELINE HUB
 ===============================================================================
 A sleek, interactive command center for orchestrating host telemetry collection,
 data sanitization, homogeneous graph construction, and browser visualization.
@@ -52,14 +52,14 @@ def clear_screen():
     os.system("cls" if os.name == "nt" else "clear")
 
 def print_banner():
-    """Displays the stylized Nexus cyber-forensics header."""
+    """Displays the stylized GraphVerse cyber-forensics header."""
     banner = f"""
-{Color.CYAN}  _   _ _______  ___   _ ____     ____ ____      _    ____  _   _ 
- | \\ | | ____\\ \\/ / | | / ___|   / ___|  _ \\    / \\  |  _ \\| | | |
- |  \\| |  _|  \\  /| | | \\___ \\  | |  _| |_) |  / _ \\ | |_) | |_| |
- | |\\  | |___ /  \\| |_| |___) | | |_| |  _ <  / ___ \\|  __/|  _  |
- |_| \\_|_____/_/\\_\\\\___/|____/   \\____|_| \\_\\/_/   \\_\\_|   |_| |_|{Color.RESET}
- {Color.PURPLE}--- Windows Host Forensics & GNN Homogeneous Graph Hub ---{Color.RESET}
+{Color.CYAN}   ____ ____      _    ____  _   ___     _______ ____  ____  _____ 
+  / ___|  _ \\    / \\  |  _ \\| | | \\ \\   / / ____|  _ \\/ ___|| ____|
+ | |  _| |_) |  / _ \\ | |_) | |_| |\\ \\ / /|  _| | |_) \\___ \\|  _|  
+ | |_| |  _ <  / ___ \\|  __/|  _  | \\ V / | |___|  _ < ___) | |___ 
+  \\____|_| \\_\\/_/   \\_\\_|   |_| |_|  \\_/  |_____|_| \\_\\____/|_____|{Color.RESET}
+ {Color.PURPLE}--- GraphVerse: Windows Host Forensics & GNN Homogeneous Graph Hub ---{Color.RESET}
 """
     print(banner)
 
@@ -424,7 +424,7 @@ def main_menu():
         elif choice == "8":
             compile_collector()
         elif choice == "0" or choice.lower() in ["exit", "q", "quit"]:
-            print(f"\n{Color.CYAN}[*] Exiting Nexus Graph Hub. Goodbye!{Color.RESET}\n")
+            print(f"\n{Color.CYAN}[*] Exiting GraphVerse Hub. Goodbye!{Color.RESET}\n")
             break
         else:
             print(f"\n{Color.RED}[!] Invalid choice. Please enter a number between 0 and 8.{Color.RESET}")
