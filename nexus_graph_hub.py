@@ -10,6 +10,8 @@ data sanitization, homogeneous graph construction, and browser visualization.
 import os
 import sys
 import time
+import datetime
+import shutil
 import subprocess
 import webbrowser
 import ctypes
@@ -72,6 +74,10 @@ def print_system_status():
     csv_exists = os.path.exists("telemetry_graph_nodes.csv") and os.path.exists("telemetry_graph_weighted_edges.csv")
     graph_exists = os.path.exists("homogeneous_graph_view.html") and os.path.exists("homogeneous_pyg_data.pt")
     
+    snapshot_dir = Path("snapshots")
+    snapshot_count = len(list(snapshot_dir.glob("telemetry_*.json"))) if snapshot_dir.exists() else 0
+    snapshot_status = f"{Color.GREEN}{snapshot_count} Archived Run(s){Color.RESET}" if snapshot_count > 0 else f"{Color.DIM}Vault Empty{Color.RESET}"
+
     data_status = f"{Color.GREEN}Active Data Present{Color.RESET}" if raw_exists else f"{Color.DIM}No Snapshot (Ready to Collect){Color.RESET}"
     graph_status = f"{Color.GREEN}Built & Ready{Color.RESET}" if graph_exists else f"{Color.DIM}Not Generated Yet{Color.RESET}"
 
@@ -80,6 +86,7 @@ def print_system_status():
     print(f"  * C++ Collector:  {bin_status}")
     print(f"  * Raw Telemetry:  {data_status}")
     print(f"  * Dynamic Graph:  {graph_status}")
+    print(f"  * Snapshot Vault: {snapshot_status}")
     print(f"{Color.DIM} -------------------------------------------------------------{Color.RESET}")
 
 def run_command(cmd, step_name: str) -> bool:
@@ -157,6 +164,12 @@ def collect_telemetry():
         else:
             return
 
+    if os.path.exists("telemetry.json"):
+        archive_opt = input(f"\n {Color.AMBER}[?] Existing telemetry.json found. Archive it before overwriting? (y/n, default: n): {Color.RESET}").strip().lower()
+        if archive_opt == "y":
+            archive_current_snapshot(interactive=False)
+            print(f" {Color.GREEN}[+] Previous snapshot archived to snapshots/{Color.RESET}\n")
+
     flags = prompt_collection_flags()
     run_command([bin_path] + flags, "Host Telemetry Snapshot")
     input(f"\n{Color.CYAN}Press Enter to return to menu...{Color.RESET}")
@@ -210,6 +223,12 @@ def run_end_to_end():
             subprocess.run(["build.bat"], check=True)
         else:
             compile_collector()
+
+    if os.path.exists("telemetry.json"):
+        archive_opt = input(f"\n {Color.AMBER}[?] Existing telemetry.json found. Archive it before overwriting? (y/n, default: n): {Color.RESET}").strip().lower()
+        if archive_opt == "y":
+            archive_current_snapshot(interactive=False)
+            print(f" {Color.GREEN}[+] Previous snapshot archived to snapshots/{Color.RESET}\n")
 
     flags = prompt_collection_flags()
     if not run_command([bin_path] + flags, "1. Live Host Telemetry Snapshot"):
@@ -301,6 +320,73 @@ def display_forensic_triage():
 
     input(f"\n{Color.CYAN}Press Enter to return to menu...{Color.RESET}")
 
+def archive_current_snapshot(interactive: bool = True) -> str | None:
+    """Copies current telemetry and graph artifacts into the snapshots/ directory with a timestamp."""
+    if not os.path.exists("telemetry.json"):
+        if interactive:
+            print(f"\n{Color.AMBER}[!] No telemetry.json found to archive.{Color.RESET}")
+            input(f"\n{Color.CYAN}Press Enter to return...{Color.RESET}")
+        return None
+
+    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    snapshot_dir = Path("snapshots")
+    snapshot_dir.mkdir(exist_ok=True)
+
+    targets = [
+        ("telemetry.json", f"telemetry_{timestamp}.json"),
+        ("telemetry_graph_nodes.csv", f"nodes_{timestamp}.csv"),
+        ("telemetry_graph_weighted_edges.csv", f"edges_{timestamp}.csv"),
+        ("homogeneous_nodes.csv", f"homogeneous_nodes_{timestamp}.csv"),
+        ("homogeneous_edges.csv", f"homogeneous_edges_{timestamp}.csv"),
+        ("homogeneous_graph_view.html", f"graph_view_{timestamp}.html"),
+        ("homogeneous_pyg_data.pt", f"pyg_data_{timestamp}.pt"),
+    ]
+
+    archived = []
+    for src, dst in targets:
+        if os.path.exists(src):
+            shutil.copy2(src, snapshot_dir / dst)
+            archived.append(dst)
+
+    if interactive:
+        print(f"\n{Color.GREEN}[+] Snapshot successfully saved to vault!{Color.RESET}")
+        print(f"    {Color.DIM}Vault directory: {snapshot_dir.resolve()}{Color.RESET}")
+        for item in archived:
+            print(f"    * {Color.CYAN}{item}{Color.RESET}")
+        input(f"\n{Color.CYAN}Press Enter to return to menu...{Color.RESET}")
+
+    return timestamp
+
+def snapshot_vault_menu():
+    """Interactive vault for archiving current run or browsing historical snapshots."""
+    clear_screen()
+    print_banner()
+    print(f"{Color.BOLD}=== Telemetry Snapshot Vault & Historical Archive ==={Color.RESET}\n")
+    snapshot_dir = Path("snapshots")
+    snapshot_dir.mkdir(exist_ok=True)
+    json_archives = sorted(snapshot_dir.glob("telemetry_*.json"), reverse=True)
+
+    print(f"  {Color.GREEN}[1]{Color.RESET} Archive Current Active Telemetry & Graph Now")
+    print(f"  {Color.CYAN}[2]{Color.RESET} View All Archived Snapshots ({len(json_archives)} found)")
+    print(f"  {Color.RED}[0]{Color.RESET} Return to Main Menu\n")
+
+    subchoice = input(f" {Color.BOLD}Select vault option [0-2]: {Color.RESET}").strip()
+    if subchoice == "1":
+        archive_current_snapshot(interactive=True)
+    elif subchoice == "2":
+        clear_screen()
+        print_banner()
+        print(f"{Color.BOLD}=== Archived Historical Snapshots ==={Color.RESET}\n")
+        if not json_archives:
+            print(f"  {Color.DIM}No snapshots archived yet in snapshots/ directory.{Color.RESET}")
+        else:
+            for idx, snap in enumerate(json_archives, start=1):
+                size_mb = snap.stat().st_size / (1024 * 1024)
+                mtime = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(snap.stat().st_mtime))
+                print(f"  {Color.CYAN}[{idx}]{Color.RESET} {Color.BOLD}{snap.name}{Color.RESET}")
+                print(f"      Size: {size_mb:.2f} MB | Timestamp: {mtime}")
+        input(f"\n{Color.CYAN}Press Enter to return...{Color.RESET}")
+
 def main_menu():
     """Main menu interaction loop."""
     while True:
@@ -315,10 +401,11 @@ def main_menu():
         print(f"  {Color.CYAN}[4]{Color.RESET} Phase 3: Homogeneous Graph Conversion & GNN Tensor Export")
         print(f"  {Color.CYAN}[5]{Color.RESET} Launch Interactive Graph Visualizer in Browser")
         print(f"  {Color.AMBER}[6]{Color.RESET} Instant Security Triage & Graph Topology Insights")
-        print(f"  {Color.PURPLE}[7]{Color.RESET} Recompile Native C++ Telemetry Collector")
+        print(f"  {Color.PURPLE}[7]{Color.RESET} Snapshot Vault (Archive current state or view history)")
+        print(f"  {Color.PURPLE}[8]{Color.RESET} Recompile Native C++ Telemetry Collector")
         print(f"  {Color.RED}[0]{Color.RESET} Exit\n")
 
-        choice = input(f" {Color.BOLD}Enter option [0-7]: {Color.RESET}").strip()
+        choice = input(f" {Color.BOLD}Enter option [0-8]: {Color.RESET}").strip()
 
         if choice == "1":
             run_end_to_end()
@@ -333,12 +420,14 @@ def main_menu():
         elif choice == "6":
             display_forensic_triage()
         elif choice == "7":
+            snapshot_vault_menu()
+        elif choice == "8":
             compile_collector()
         elif choice == "0" or choice.lower() in ["exit", "q", "quit"]:
             print(f"\n{Color.CYAN}[*] Exiting Nexus Graph Hub. Goodbye!{Color.RESET}\n")
             break
         else:
-            print(f"\n{Color.RED}[!] Invalid choice. Please enter a number between 0 and 7.{Color.RESET}")
+            print(f"\n{Color.RED}[!] Invalid choice. Please enter a number between 0 and 8.{Color.RESET}")
             time.sleep(1)
 
 if __name__ == "__main__":

@@ -41,3 +41,6 @@ homogeneous_graph.json
 *.png
 *.html
 *.log
+snapshots/
+*snapshot*
+
