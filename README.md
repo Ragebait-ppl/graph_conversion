@@ -12,7 +12,7 @@ An end-to-end framework for capturing low-level Windows host execution states, s
 
 ## 📌 Architecture & Workflow
 
-```
+```text
 +---------------------+     +--------------------------+     +--------------------------+
 |  Live System State  | --> | C++20 Telemetry Engine   | --> | Raw Snapshot             |
 |  Processes, Memory, |     | (Native Win32 APIs)      |     | (telemetry.json)         |
@@ -24,20 +24,20 @@ An end-to-end framework for capturing low-level Windows host execution states, s
 | GNN-Ready Artifacts      | <-- | Homogeneous Graph        | <-- | Tabular Datasets (CSVs)  |
 | - PyG Data Tensor (.pt)  |     | Conversion Engine        |     | - nodes.csv              |
 | - 0-indexed Node Tensor  |     | (Proper Labeling, Index, |     | - weighted_edges.csv     |
-| - Stable Interactive View|     | Deterministic Coordinates|     |                          |
+| - Spaced Interactive View|     | Elastic Repulsion Layout)|     |                          |
 +--------------------------+     +--------------------------+     +--------------------------+
 ```
 
 1. **Host Telemetry Collection (Phase 1)**: Captures running processes, process parentage (PPID), thread counts, loaded modules, unbacked executable virtual memory regions (with Shannon entropy calculation), and TCP/UDP sockets at an instantaneous moment.
 2. **Data Serialization**: Serializes real-time metrics into `telemetry.json` and decomposes them into sorted, structured CSVs (`telemetry_graph_nodes.csv`, `telemetry_graph_weighted_edges.csv`).
-3. **Homogeneous Graph Conversion (Phase 2)**: Transforms heterogeneous host entities into a unified homogeneous graph with contiguous 0-indexing, differentiated node taxonomy, formulated semantic labels, multi-dimensional normalized feature vectors, deterministic spatial layout, and interactive graph rendering.
+3. **Homogeneous Graph Conversion (Phase 2)**: Transforms heterogeneous host entities into a unified homogeneous graph with contiguous 0-indexing, differentiated node taxonomy, formulated semantic labels, multi-dimensional normalized feature vectors, dynamic physics repulsion spacing, and interactive graph rendering.
 4. **GNN Modeling (Future Phase)**: Ingests the homogeneous graph into GNN architectures (GCN, GAT, GraphSAGE) for malicious process classification and anomalous subgraph detection.
 
 ---
 
 ## 📂 Repository Directory Structure
 
-```
+```text
 graph_conversion/
 ├── CMakeLists.txt                    # Standard CMake build configuration
 ├── Makefile                          # MinGW / GCC makefile
@@ -75,12 +75,15 @@ graph_conversion/
 ## ⚙️ Prerequisites & Compilation
 
 ### C++ Compiler
+
 - **MinGW-w64** (GCC 11+) OR **MSVC** (Visual Studio 2022+) with C++20 support.
 - Native build linking `ws2_32`, `iphlpapi`, `psapi`, `advapi32`. Pure native machine code (no .NET runtime).
 
 ### Python Environment
+
 - Python 3.10+
 - Recommended packages:
+
   ```bash
   pip install networkx matplotlib pandas numpy scipy pyvis torch torch_geometric scikit-learn
   ```
@@ -88,17 +91,21 @@ graph_conversion/
 ### Build Options
 
 #### Option 1: Quick Batch Build (MinGW / GCC)
+
 ```cmd
 build.bat
 ```
+
 Produces `bin\telemetry_engine.exe`.
 
 #### Option 2: MinGW Make
+
 ```cmd
 mingw32-make
 ```
 
 #### Option 3: CMake
+
 ```cmd
 mkdir build
 cd build
@@ -118,7 +125,8 @@ To inspect privileged system processes, virtual memory allocations, and socket t
 ```
 
 ### CLI Options
-```
+
+```text
 Usage: telemetry_engine.exe [options]
 
 Options:
@@ -133,15 +141,19 @@ Options:
 ## 📊 Telemetry Data & Intermediate CSV Representation
 
 The engine outputs structured metrics:
+
 - **Processes**: PID, PPID, executable name, image path, thread counts, loaded modules.
 - **Unbacked Memory**: Base address, region size, page protection (`PAGE_EXECUTE_READWRITE`, `PAGE_EXECUTE_READ`), Shannon entropy ($H \in [0.0, 8.0]$).
 - **Sockets**: Local address, local port, remote address, remote port, protocol, state.
 
 To parse `telemetry.json` into tabular sorted CSV files:
+
 ```powershell
 python organize_and_clean_telemetry.py
 ```
+
 This generates:
+
 - `telemetry_graph_nodes.csv`: Standardized node table.
 - `telemetry_graph_weighted_edges.csv`: Weighted relational edge records (`spawns`, `has_memory`, `connected_to`).
 
@@ -152,11 +164,13 @@ This generates:
 GNN algorithms require homogeneous graphs where all nodes share a common feature space $\mathbb{R}^d$ and contiguous 0-indexed integer IDs.
 
 Run the converter:
+
 ```powershell
 python generate_homogeneous_graph.py
 ```
 
-### Key Capabilities & Taxonomy Refinements:
+### Key Capabilities and Taxonomy Refinements
+
 1. **Contiguous Node Indexing**: Maps all system entities (Processes, Memory regions, Sockets) to a contiguous sequence $0, 1, \dots, |V|-1$.
 2. **Differentiated Node Taxonomy**:
    - **System Core Processes** (`#818cf8` Indigo Diamond): OS infrastructure binaries (`services.exe`, `lsass.exe`, `svchost.exe`).
@@ -183,7 +197,7 @@ python generate_homogeneous_graph.py
    - `homogeneous_nodes.csv`: Node table with normalized feature dimensions, category classifications, and $(x, y)$ positions.
    - `homogeneous_edges.csv`: Edge table with source/target indices, relation types, and normalized weights.
    - `homogeneous_pyg_data.pt`: PyTorch Geometric `Data(x=[923, 16], edge_index=[2, 904], edge_attr=[904, 4])` artifact.
-   - `homogeneous_graph_view.html`: Standalone interactive web view with search by PID/name/service, category filters, and 16D feature inspector.
+   - `homogeneous_graph_view.html`: Standalone interactive web view with search by PID/name/service, category filters, live repulsion controls, and 16D feature inspector.
    - `homogeneous_graph_preview.png`: Publication-grade high-resolution static rendering.
 
 ---
